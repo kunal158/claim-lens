@@ -1,0 +1,14 @@
+package com.claimlens.domain.enums;
+
+public enum ReelStatus {
+    PENDING,
+    TRANSCRIBING,
+    TRANSCRIBED,
+    EXTRACTING_CLAIMS,
+    CLAIMS_EXTRACTED,
+    RETRIEVING_EVIDENCE,
+    EVIDENCE_RETRIEVED,
+    SYNTHESIZING_VERDICTS,
+    VERDICTS_SYNTHESIZED,
+    FAILED
+}

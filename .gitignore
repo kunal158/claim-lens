@@ -1,0 +1,17 @@
+.idea/
+data/
+interview-prep/
+architecture.md
+
+claimlens-api/target/
+claimlens-api/*.log
+claimlens-api/backend-dev.log
+claimlens-api/data/
+claimlens-api/effective-pom.xml
+
+claim-lens-frontend/node_modules/
+claim-lens-frontend/dist/
+claim-lens-frontend/*.local
+claim-lens-frontend/frontend-dev.log
+
+*.log

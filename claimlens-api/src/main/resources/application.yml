@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: claimlens-api
+  datasource:
+    url: jdbc:postgresql://localhost:5432/claimlens
+    username: postgres
+    password: ${DB_PASSWORD:postgres}
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 200MB
+
+claimlens:
+  upload-dir: ./data/uploads
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    base-url: https://generativelanguage.googleapis.com
+    model: gemini-2.5-flash
+    embedding-model: gemini-embedding-001
+  tavily:
+    api-key: ${TAVILY_API_KEY:}
+    base-url: https://api.tavily.com
+  yt-dlp:
+    binary-path: ${YT_DLP_PATH:C:\Users\KunalGoswami\AppData\Local\Microsoft\WinGet\Packages\yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe\yt-dlp.exe}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
