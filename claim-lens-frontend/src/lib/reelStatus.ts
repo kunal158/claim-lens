@@ -1,6 +1,7 @@
 import type { ReelStatus } from '../types/api';
 
 export const REEL_STATUS_SEQUENCE: ReelStatus[] = [
+  'DOWNLOADING',
   'PENDING',
   'TRANSCRIBING',
   'TRANSCRIBED',
@@ -23,6 +24,7 @@ export function stepIndex(status: ReelStatus): number {
 }
 
 const STATUS_LABELS: Record<ReelStatus, string> = {
+  DOWNLOADING: 'Downloading',
   PENDING: 'Pending',
   TRANSCRIBING: 'Transcribing',
   TRANSCRIBED: 'Transcribed',

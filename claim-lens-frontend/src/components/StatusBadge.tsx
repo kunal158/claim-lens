@@ -2,6 +2,7 @@ import type { ReelStatus } from '../types/api';
 import { statusLabel } from '../lib/reelStatus';
 
 const COLORS: Record<ReelStatus, string> = {
+  DOWNLOADING: 'bg-slate-100 text-slate-700',
   PENDING: 'bg-slate-100 text-slate-700',
   TRANSCRIBING: 'bg-blue-100 text-blue-700',
   TRANSCRIBED: 'bg-blue-100 text-blue-700',

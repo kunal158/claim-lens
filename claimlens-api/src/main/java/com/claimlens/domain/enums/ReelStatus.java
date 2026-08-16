@@ -1,6 +1,7 @@
 package com.claimlens.domain.enums;
 
 public enum ReelStatus {
+    DOWNLOADING,
     PENDING,
     TRANSCRIBING,
     TRANSCRIBED,

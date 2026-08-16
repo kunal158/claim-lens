@@ -1,12 +1,32 @@
 import { REEL_STATUS_SEQUENCE, statusLabel, stepIndex } from '../lib/reelStatus';
 import type { ReelStatus } from '../types/api';
 
-export function StatusStepper({ status }: { status: ReelStatus }) {
+export function StatusStepper({
+  status,
+  onRetry,
+  isRetrying,
+}: {
+  status: ReelStatus;
+  onRetry?: () => void;
+  isRetrying?: boolean;
+}) {
   if (status === 'FAILED') {
     return (
-      <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-        Processing failed. There is no automatic retry — the reel's status
-        needs to be reset manually before it can be reprocessed.
+      <div className="flex items-center justify-between gap-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <span>
+          Processing failed. Retrying will discard any claims/evidence/verdicts
+          from this attempt and restart the pipeline from scratch.
+        </span>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={isRetrying}
+            className="shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {isRetrying ? 'Retrying…' : 'Retry'}
+          </button>
+        )}
       </div>
     );
   }

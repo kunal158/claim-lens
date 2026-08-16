@@ -1,4 +1,5 @@
 export type ReelStatus =
+  | 'DOWNLOADING'
   | 'PENDING'
   | 'TRANSCRIBING'
   | 'TRANSCRIBED'

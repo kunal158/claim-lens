@@ -28,8 +28,9 @@ export function AddReelForm() {
     try {
       await processReel(reel.id);
     } catch (err) {
-      // 409 means the reel is already past PENDING (e.g. a dedup hit on an
-      // in-progress/completed reel) — safe to ignore, nothing to (re)start.
+      // 409 means the reel is mid-pipeline or already complete (a dedup hit
+      // on the same URL) — safe to ignore, nothing to (re)start. A FAILED
+      // dedup hit is NOT a 409: /process resets and restarts it instead.
       if (!axios.isAxiosError(err) || err.response?.status !== 409) throw err;
     }
     navigate(`/reels/${reel.id}`);

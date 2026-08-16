@@ -10,7 +10,6 @@ import com.claimlens.dto.VerdictSummaryResponse;
 import com.claimlens.repository.ClaimRepository;
 import com.claimlens.repository.ReelRepository;
 import com.claimlens.service.ReelPipelineService;
-import com.claimlens.service.YtDlpService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -38,18 +37,15 @@ public class ReelController {
 
     private final ReelRepository reelRepository;
     private final ClaimRepository claimRepository;
-    private final YtDlpService ytDlpService;
     private final ReelPipelineService reelPipelineService;
     private final Path uploadDir;
 
     public ReelController(ReelRepository reelRepository,
                            ClaimRepository claimRepository,
-                           YtDlpService ytDlpService,
                            ReelPipelineService reelPipelineService,
                            @Value("${claimlens.upload-dir:./data/uploads}") String uploadDir) {
         this.reelRepository = reelRepository;
         this.claimRepository = claimRepository;
-        this.ytDlpService = ytDlpService;
         this.reelPipelineService = reelPipelineService;
         this.uploadDir = Path.of(uploadDir).toAbsolutePath().normalize();
     }
@@ -99,19 +95,18 @@ public class ReelController {
 
         try {
             Files.createDirectories(uploadDir);
-            Path downloaded = ytDlpService.download(trimmedUrl, uploadDir);
-
-            Reel reel = new Reel();
-            reel.setSourceFilePath(downloaded.toString());
-            reel.setSourceUrl(trimmedUrl);
-            reel = reelRepository.save(reel);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(ReelResponse.from(reel));
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to prepare upload directory", e);
-        } catch (RuntimeException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to download video from url", e);
         }
+
+        Reel reel = new Reel();
+        reel.setSourceUrl(trimmedUrl);
+        reel.setStatus(ReelStatus.DOWNLOADING);
+        reel = reelRepository.save(reel);
+
+        reelPipelineService.downloadAndProcess(reel.getId(), trimmedUrl, uploadDir);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(ReelResponse.from(reel));
     }
 
     private static String trimUrl(String url) {
@@ -171,7 +166,7 @@ public class ReelController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "reel not found"));
 
         ReelStatus status = reel.getStatus();
-        if (status == ReelStatus.FAILED
+        if (status == ReelStatus.DOWNLOADING
                 || status == ReelStatus.TRANSCRIBING
                 || status == ReelStatus.EXTRACTING_CLAIMS
                 || status == ReelStatus.RETRIEVING_EVIDENCE
@@ -180,6 +175,14 @@ public class ReelController {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "reel cannot be processed from status " + status
                             + " — use the individual stage endpoints instead");
+        }
+
+        if (status == ReelStatus.FAILED) {
+            reelPipelineService.resetForRetry(reel);
+            if (reel.getStatus() == ReelStatus.DOWNLOADING) {
+                reelPipelineService.downloadAndProcess(id, reel.getSourceUrl(), uploadDir);
+                return ResponseEntity.accepted().body(ReelResponse.from(reel));
+            }
         }
 
         reelPipelineService.processAsync(id);

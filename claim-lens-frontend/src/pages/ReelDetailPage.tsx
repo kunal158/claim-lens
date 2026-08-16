@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { getClaims, getReel, getVerdictSummary } from '../api/reels';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getClaims, getReel, getVerdictSummary, processReel } from '../api/reels';
 import { StatusStepper } from '../components/StatusStepper';
 import { TrustScoreGauge } from '../components/TrustScoreGauge';
 import { ClaimCard } from '../components/ClaimCard';
@@ -9,6 +9,7 @@ import { isTerminal } from '../lib/reelStatus';
 export function ReelDetailPage() {
   const { id } = useParams();
   const reelId = Number(id);
+  const queryClient = useQueryClient();
 
   const reelQuery = useQuery({
     queryKey: ['reel', reelId],
@@ -16,6 +17,15 @@ export function ReelDetailPage() {
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status && isTerminal(status) ? false : 3000;
+    },
+  });
+
+  const retryMutation = useMutation({
+    mutationFn: () => processReel(reelId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reel', reelId] });
+      queryClient.invalidateQueries({ queryKey: ['claims', reelId] });
+      queryClient.invalidateQueries({ queryKey: ['verdictSummary', reelId] });
     },
   });
 
@@ -59,7 +69,11 @@ export function ReelDetailPage() {
       )}
 
       <div className="mb-6 rounded-lg border border-slate-200 bg-white p-4">
-        <StatusStepper status={reel.status} />
+        <StatusStepper
+          status={reel.status}
+          onRetry={() => retryMutation.mutate()}
+          isRetrying={retryMutation.isPending}
+        />
       </div>
 
       {isSynthesized && (

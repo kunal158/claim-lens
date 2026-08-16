@@ -2,8 +2,8 @@ spring:
   application:
     name: claimlens-api
   datasource:
-    url: jdbc:postgresql://localhost:5432/claimlens
-    username: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/claimlens}
+    username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
   flyway:
     enabled: true
@@ -14,6 +14,8 @@ spring:
 
 claimlens:
   upload-dir: ./data/uploads
+  cors:
+    allowed-origins: ${CLAIMLENS_CORS_ALLOWED_ORIGINS:http://localhost:5173}
   gemini:
     api-key: ${GEMINI_API_KEY:}
     base-url: https://generativelanguage.googleapis.com

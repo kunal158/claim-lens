@@ -50,6 +50,7 @@ public class ReelPipelineService {
     private final ClaimVerdictRepository claimVerdictRepository;
     private final GeminiClient geminiClient;
     private final TavilyClient tavilyClient;
+    private final YtDlpService ytDlpService;
     private final ObjectMapper objectMapper;
 
     public ReelPipelineService(ReelRepository reelRepository,
@@ -58,6 +59,7 @@ public class ReelPipelineService {
                                ClaimVerdictRepository claimVerdictRepository,
                                GeminiClient geminiClient,
                                TavilyClient tavilyClient,
+                               YtDlpService ytDlpService,
                                ObjectMapper objectMapper) {
         this.reelRepository = reelRepository;
         this.claimRepository = claimRepository;
@@ -65,7 +67,31 @@ public class ReelPipelineService {
         this.claimVerdictRepository = claimVerdictRepository;
         this.geminiClient = geminiClient;
         this.tavilyClient = tavilyClient;
+        this.ytDlpService = ytDlpService;
         this.objectMapper = objectMapper;
+    }
+
+    @Async("reelPipelineExecutor")
+    public void downloadAndProcess(Long reelId, String url, Path uploadDir) {
+        Reel reel = reelRepository.findById(reelId).orElse(null);
+        if (reel == null) {
+            log.warn("reel {} not found when starting async download", reelId);
+            return;
+        }
+
+        try {
+            Path downloaded = ytDlpService.download(url, uploadDir);
+            reel.setSourceFilePath(downloaded.toString());
+            reel.setStatus(ReelStatus.PENDING);
+            reelRepository.save(reel);
+        } catch (RuntimeException e) {
+            log.error("download failed for reel {}", reelId, e);
+            reel.setStatus(ReelStatus.FAILED);
+            reelRepository.save(reel);
+            return;
+        }
+
+        processAsync(reelId);
     }
 
     public ReelResponse transcribe(Reel reel) {
@@ -265,6 +291,23 @@ public class ReelPipelineService {
             reelRepository.save(reel);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "verdict synthesis failed", e);
         }
+    }
+
+    public void resetForRetry(Reel reel) {
+        List<Claim> claims = claimRepository.findByReelId(reel.getId());
+        List<Long> claimIds = claims.stream().map(Claim::getId).toList();
+        if (!claimIds.isEmpty()) {
+            claimVerdictRepository.deleteByClaimIdIn(claimIds);
+            evidenceRepository.deleteByClaimIdIn(claimIds);
+            claimRepository.deleteAll(claims);
+        }
+
+        reel.setTranscriptSegments(null);
+        reel.setOnscreenTextSegments(null);
+        reel.setTrustScore(null);
+        reel.setSummary(null);
+        reel.setStatus(reel.getSourceFilePath() == null ? ReelStatus.DOWNLOADING : ReelStatus.PENDING);
+        reelRepository.save(reel);
     }
 
     @Async("reelPipelineExecutor")
